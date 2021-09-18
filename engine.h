@@ -14,7 +14,9 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 	if (table.count(hash)) return table[hash];
 
 	if (white) {
-		auto moves = board.get_moves<WHITE>();
+		std::vector<Move> moves;
+		board.get_moves<WHITE>(moves);
+
 		if (moves.empty()) return { -100000, {} };
 		
 		float best = -100000;
@@ -37,7 +39,9 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 		return table[hash] = { best, best_move };
 	}
 	else {
-		auto moves = board.get_moves<BLACK>();
+		std::vector<Move> moves;
+		board.get_moves<BLACK>(moves);
+
 		if (moves.empty()) return { 100000, {} };
 
 		float best = 100000;

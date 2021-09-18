@@ -49,11 +49,9 @@ piece_type Board::get_piece_at(int square) {
 	return nothing;
 }
 
-std::vector<Move> Board::_get_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp)
+void Board::_get_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
-	if (bb.is_zero()) return {};
-
-	std::vector<Move> moves;
+	if (bb.is_zero()) return;
 
 	uint64_t board = bb.get_board();
 	while (board > 0) {
@@ -79,15 +77,11 @@ std::vector<Move> Board::_get_knight_moves(color move_color, piece_type piece, B
 
 		board ^= _mask;
 	}
-
-	return moves;
 }
 
-std::vector<Move> Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp)
+void Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
-	if (bb.is_zero()) return {};
-
-	std::vector<Move> moves;
+	if (bb.is_zero()) return;
 
 	uint64_t board = bb.get_board();
 	while (board > 0) {
@@ -107,45 +101,33 @@ std::vector<Move> Board::_get_king_moves(color move_color, piece_type piece, Bit
 
 		board ^= _mask;
 	}
-
-	return moves;
 }
 
 
-template <> std::vector<Move> Board::get_moves<WHITE>() {
-	auto king = get_king_moves<WHITE>();
-	auto knight = get_knight_moves<WHITE>();
-	auto pawn = get_pawn_moves<WHITE>();
-	auto ret = king;
-	for (auto& move : knight) ret.push_back(move);
-	for (auto& move : pawn) ret.push_back(move);
+template <> void Board::get_moves<WHITE>(std::vector<Move>& moves) {
+	get_king_moves<WHITE>(moves);
+	get_knight_moves<WHITE>(moves);
+	get_pawn_moves<WHITE>(moves);
 	
 	std::random_device rd;
 	std::mt19937 g(rd());
-	std::shuffle(ret.begin(), ret.end(), g);
-	return ret;
+	std::shuffle(moves.begin(), moves.end(), g);
 }
 
-template <> std::vector<Move> Board::get_moves<BLACK>() {
-	auto king = get_king_moves<BLACK>();
-	auto knight = get_knight_moves<BLACK>();
-	auto pawn = get_pawn_moves<BLACK>();
-	auto ret = king;
-	for (auto& move : knight) ret.push_back(move);
-	for (auto& move : pawn) ret.push_back(move);
+template <> void Board::get_moves<BLACK>(std::vector<Move>& moves) {
+	get_king_moves<BLACK>(moves);
+	get_knight_moves<BLACK>(moves);
+	get_pawn_moves<BLACK>(moves);
 
 	std::random_device rd;
 	std::mt19937 g(rd());
-	std::shuffle(ret.begin(), ret.end(), g);
-	return ret;
+	std::shuffle(moves.begin(), moves.end(), g);
 }
 
 
-std::vector<Move> Board::_get_w_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp) 
+void Board::_get_w_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
-	if (bb.is_zero()) return {};
-
-	std::vector<Move> moves;
+	if (bb.is_zero()) return;
 
 	uint64_t board = bb.get_board();
 	while (board > 0) {
@@ -168,15 +150,11 @@ std::vector<Move> Board::_get_w_pawn_moves(color move_color, piece_type piece, B
 
 		board ^= _mask;
 	}
-
-	return moves;
 }
 
-std::vector<Move> Board::_get_b_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp) 
+void Board::_get_b_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
-	if (bb.is_zero()) return {};
-
-	std::vector<Move> moves;
+	if (bb.is_zero());
 
 	uint64_t board = bb.get_board();
 	while (board > 0) {
@@ -199,8 +177,6 @@ std::vector<Move> Board::_get_b_pawn_moves(color move_color, piece_type piece, B
 
 		board ^= _mask;
 	}
-
-	return moves;
 }
 
 

@@ -18,8 +18,8 @@ private:
 	Bitboard white_pieces;
 	Bitboard black_pieces;
 
-	std::vector<Move> _get_w_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&);
-	std::vector<Move> _get_b_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&);
+	void _get_w_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&, std::vector<Move>&);
+	void _get_b_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&, std::vector<Move>&);
 
 	void init_zobrist();
 public:
@@ -54,37 +54,37 @@ public:
 
 	unsigned long long get_hash();
 
-	template <int> std::vector<Move> get_moves();
+	template <int> void get_moves(std::vector<Move>&);
 
-	template <int> std::vector<Move> get_pawn_moves();
-	template <> std::vector<Move> get_pawn_moves<WHITE>() {
-		return _get_w_pawn_moves(WHITE, w_pawn, pieces[w_pawn], white_pieces, black_pieces);
+	template <int> void get_pawn_moves(std::vector<Move>&);
+	template <> void get_pawn_moves<WHITE>(std::vector<Move>& moves) {
+		_get_w_pawn_moves(WHITE, w_pawn, pieces[w_pawn], white_pieces, black_pieces, moves);
 	}
-	template <> std::vector<Move> get_pawn_moves<BLACK>() {
-		return _get_b_pawn_moves(BLACK, b_pawn, pieces[b_pawn], black_pieces, white_pieces);
+	template <> void get_pawn_moves<BLACK>(std::vector<Move>& moves) {
+		_get_b_pawn_moves(BLACK, b_pawn, pieces[b_pawn], black_pieces, white_pieces, moves);
 	}
 
 
 
-	template <int> std::vector<Move> get_knight_moves();
-	template <> std::vector<Move> get_knight_moves<WHITE>() {
-		return _get_knight_moves(WHITE, w_knight, pieces[w_knight], white_pieces, black_pieces);
+	template <int> void get_knight_moves(std::vector<Move>&);
+	template <> void get_knight_moves<WHITE>(std::vector<Move>& moves) {
+		_get_knight_moves(WHITE, w_knight, pieces[w_knight], white_pieces, black_pieces, moves);
 	}
-	template <> std::vector<Move> get_knight_moves<BLACK>() {
-		return _get_knight_moves(BLACK, b_knight, pieces[b_knight], black_pieces, white_pieces);
+	template <> void get_knight_moves<BLACK>(std::vector<Move>& moves) {
+		_get_knight_moves(BLACK, b_knight, pieces[b_knight], black_pieces, white_pieces, moves);
 	}
-	std::vector<Move> _get_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp);
+	void _get_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 
 
-	template <int> std::vector<Move> get_king_moves();
-	template <> std::vector<Move> get_king_moves<WHITE>() {
-		return _get_king_moves(WHITE, w_king, pieces[w_king], white_pieces, black_pieces);
+	template <int> void get_king_moves(std::vector<Move>&);
+	template <> void get_king_moves<WHITE>(std::vector<Move>& moves) {
+		_get_king_moves(WHITE, w_king, pieces[w_king], white_pieces, black_pieces, moves);
 	}
-	template <> std::vector<Move> get_king_moves<BLACK>() {
-		return _get_king_moves(BLACK, b_king, pieces[b_king], black_pieces, white_pieces);
+	template <> void get_king_moves<BLACK>(std::vector<Move>& moves) {
+		_get_king_moves(BLACK, b_king, pieces[b_king], black_pieces, white_pieces, moves);
 	}
-	std::vector<Move> _get_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp);
+	void _get_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 	void make_move(Move&);
 	void unmake_move(Move&);
