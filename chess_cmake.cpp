@@ -17,7 +17,7 @@ int main()
 	//bishop_masks();
 	//getchar();
 
-	Board board("8/2bb4/8/3b4/1B6/8/4B3/8");// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
+	Board board("6k1/4Q3/8/6K1/8/8/8/8");// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
 
 	DEBUG::show_board(board);
 	getchar();
@@ -27,7 +27,7 @@ int main()
 		table.clear();
 		table.reserve(1024ll * 1024ll * 100ll);
 
-		auto [score, move] = minimax(board, white, 4, NEG_INF, INF);
+		auto [score, move] = minimax(board, white, 5, NEG_INF, INF);
 		if (move.to_square.is_zero()) break;
 		system("cls");
 		board.make_move(move);

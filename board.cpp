@@ -379,6 +379,35 @@ void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& cons
 	}
 }
 
+void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves) 
+{
+	if (bb.is_zero()) return;
+
+	uint64_t board = bb.get_board();
+	while (board > 0) {
+		int idx = 63 - __lzcnt64(board);
+		uint64_t _mask = (1ull << idx);
+		auto mask = Bitboard(_mask);
+		uint64_t occupancy = (our.get_board() & opp.get_board()) & bishop_magic_mask;
+		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
+		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
+
+		occupancy = (our.get_board() & opp.get_board()) & rook_magic_masks[idx];
+		hash = (rook_magics[idx] * occupancy) >> (63 - 13);
+		attacks = attacks | (rook_attacks[idx][hash] & ~our.get_board());
+
+		while (attacks) {
+			int index = 63 - __lzcnt64(attacks);
+			uint64_t move_mask = (1ull << index);
+			attacks ^= move_mask;
+
+			Helpers::generate_and_add_move(move_color, *this, mask, Bitboard(move_mask), piece, our, opp, moves);
+		}
+
+		board ^= _mask;
+	}
+}
+
 
 template <> void Board::get_moves<WHITE>(std::vector<Move>& moves) {
 	get_king_moves<WHITE>(moves);
@@ -386,13 +415,14 @@ template <> void Board::get_moves<WHITE>(std::vector<Move>& moves) {
 	get_pawn_moves<WHITE>(moves);
 	get_rook_moves<WHITE>(moves);
 	get_bishop_moves<WHITE>(moves);
+	get_queen_moves<WHITE>(moves);
 	
 	std::random_device rd;
 	std::mt19937 g(rd());
 	sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
 		return a.is_capture > b.is_capture;
 	});
-	//std::shuffle(moves.begin(), moves.end(), g);
+	std::shuffle(moves.begin(), moves.end(), g);
 }
 
 template <> void Board::get_moves<BLACK>(std::vector<Move>& moves) {
@@ -401,13 +431,14 @@ template <> void Board::get_moves<BLACK>(std::vector<Move>& moves) {
 	get_pawn_moves<BLACK>(moves);
 	get_rook_moves<BLACK>(moves);
 	get_bishop_moves<BLACK>(moves);
+	get_queen_moves<BLACK>(moves);
 
 	std::random_device rd;
 	std::mt19937 g(rd());
 	sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
 		return a.is_capture > b.is_capture;
 	});
-	//std::shuffle(moves.begin(), moves.end(), g);
+	std::shuffle(moves.begin(), moves.end(), g);
 }
 
 
@@ -502,6 +533,7 @@ void Board::unmake_move(Move& move) {
 float Board::evaluate() {
 	return (this->pieces[w_knight].set_bits() - this->pieces[b_knight].set_bits()) * 3
 		+ (this->pieces[w_bishop].set_bits() - this->pieces[b_bishop].set_bits()) * 3
+		+ (this->pieces[w_queen].set_bits() - this->pieces[b_queen].set_bits()) * 9
 		+ (this->pieces[w_rook].set_bits() - this->pieces[b_rook].set_bits()) * 5
 		+ (this->pieces[w_pawn].set_bits() - this->pieces[b_pawn].set_bits()) * 1
 		+ (this->pieces[w_king].set_bits() - this->pieces[b_king].set_bits()) * 1000;

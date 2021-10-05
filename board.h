@@ -115,6 +115,16 @@ public:
 		_get_bishop_moves(BLACK, b_bishop, pieces[b_bishop], black_pieces, white_pieces, moves);
 	}
 	void _get_bishop_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+	
+
+	template <int> void get_queen_moves(std::vector<Move>&);
+	template <> void get_queen_moves<WHITE>(std::vector<Move>& moves) {
+		_get_queen_moves(WHITE, w_queen, pieces[w_queen], white_pieces, black_pieces, moves);
+	}
+	template <> void get_queen_moves<BLACK>(std::vector<Move>& moves) {
+		_get_queen_moves(BLACK, b_queen, pieces[b_queen], black_pieces, white_pieces, moves);
+	}
+	void _get_queen_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 
 
