@@ -21,14 +21,32 @@ private:
 	void _get_w_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&, std::vector<Move>&);
 	void _get_b_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&, std::vector<Move>&);
 
+	std::array<std::array<uint64_t, 16384>, 64> rook_attacks;
+	std::array<uint64_t, 64> rook_magics;
+	std::array<uint64_t, 64> rook_magic_masks;
+	void init_rook_magics();
+
+	std::array<std::array<uint64_t, 2048>, 64> bishop_attacks;
+	std::array<uint64_t, 64> bishop_magics;
+	const uint64_t bishop_magic_mask = (FILE_A | FILE_H | RANK_1 | RANK_8);
+	void init_bishop_magics();
+
 	void init_zobrist();
 public:
 	Board() { 
 		init_zobrist();
+		init_rook_magics();
+		printf("rook magics done\n");
+		init_bishop_magics();
+		printf("bishop magics done\n");
 	}
 
 	Board(std::string fen) {
 		init_zobrist();
+		init_rook_magics();
+		printf("rook magics done\n");
+		init_bishop_magics();
+		printf("bishop magics done\n");
 
 		int idx = 63;
 		const std::unordered_map<char, piece_type> notation_to_piece = 
@@ -50,9 +68,11 @@ public:
 		for (piece_type b = b_pawn; b <= b_king; ++b) black_pieces = black_pieces | pieces[b];
 	}
 
+	uint64_t white_move_hash, black_move_hash;
+
 	piece_type get_piece_at(int);
 
-	unsigned long long get_hash();
+	unsigned long long get_hash(uint64_t);
 
 	template <int> void get_moves(std::vector<Move>&);
 
@@ -74,6 +94,37 @@ public:
 		_get_knight_moves(BLACK, b_knight, pieces[b_knight], black_pieces, white_pieces, moves);
 	}
 	void _get_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+
+
+
+	template <int> void get_rook_moves(std::vector<Move>&);
+	template <> void get_rook_moves<WHITE>(std::vector<Move>& moves) {
+		_get_rook_moves(WHITE, w_rook, pieces[w_rook], white_pieces, black_pieces, moves);
+	}
+	template <> void get_rook_moves<BLACK>(std::vector<Move>& moves) {
+		_get_rook_moves(BLACK, b_rook, pieces[b_rook], black_pieces, white_pieces, moves);
+	}
+	void _get_rook_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+
+
+	template <int> void get_bishop_moves(std::vector<Move>&);
+	template <> void get_bishop_moves<WHITE>(std::vector<Move>& moves) {
+		_get_bishop_moves(WHITE, w_bishop, pieces[w_bishop], white_pieces, black_pieces, moves);
+	}
+	template <> void get_bishop_moves<BLACK>(std::vector<Move>& moves) {
+		_get_bishop_moves(BLACK, b_bishop, pieces[b_bishop], black_pieces, white_pieces, moves);
+	}
+	void _get_bishop_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+	
+
+	template <int> void get_queen_moves(std::vector<Move>&);
+	template <> void get_queen_moves<WHITE>(std::vector<Move>& moves) {
+		_get_queen_moves(WHITE, w_queen, pieces[w_queen], white_pieces, black_pieces, moves);
+	}
+	template <> void get_queen_moves<BLACK>(std::vector<Move>& moves) {
+		_get_queen_moves(BLACK, b_queen, pieces[b_queen], black_pieces, white_pieces, moves);
+	}
+	void _get_queen_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 
 
