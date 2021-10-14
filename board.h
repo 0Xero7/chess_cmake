@@ -24,12 +24,15 @@ private:
 	std::array<std::array<uint64_t, 16384>, 64> rook_attacks;
 	std::array<uint64_t, 64> rook_magics;
 	std::array<uint64_t, 64> rook_magic_masks;
-	void init_rook_magics();
+	void init_rook_magics(); 
+	uint64_t Board::get_rook_attacks_mask(int, uint64_t& const);
 
 	std::array<std::array<uint64_t, 2048>, 64> bishop_attacks;
 	std::array<uint64_t, 64> bishop_magics;
-	const uint64_t bishop_magic_mask = (FILE_A | FILE_H | RANK_1 | RANK_8);
+	const uint64_t bishop_magic_mask = ~(FILE_A | FILE_H | RANK_1 | RANK_8);
 	void init_bishop_magics();
+
+	uint64_t Board::get_king_attack_mask(int);
 
 	void init_zobrist();
 public:
@@ -71,10 +74,45 @@ public:
 	uint64_t white_move_hash, black_move_hash;
 
 	piece_type get_piece_at(int);
+	uint64_t get_occupancy_mask();
 
 	unsigned long long get_hash(uint64_t);
 
 	template <int> void get_moves(std::vector<Move>&);
+	uint64_t Board::get_bishop_attacks_mask(int, uint64_t& const);
+
+	template <int> bool is_in_check(uint64_t& const);
+	template <> bool is_in_check<WHITE>(uint64_t& const occupancy) {
+		auto king = pieces[w_king].get_board();
+		if (king == 0) return false;
+
+		auto idx = 63 - __lzcnt64(king);
+		auto rook_queen = (pieces[b_rook] | pieces[b_queen]).get_board();
+		auto bishop_queen = (pieces[b_bishop] | pieces[b_queen]).get_board();
+
+		auto rook_attacks = get_rook_attacks_mask(idx, occupancy);
+		auto bishop_attacks = get_bishop_attacks_mask(idx, occupancy);
+		auto king_attacks = get_king_attack_mask(idx);
+
+		return ((rook_queen & rook_attacks) | (bishop_queen & bishop_attacks)) 
+			| ((king_attacks & pieces[b_king].get_board()));
+	}
+
+	template <> bool is_in_check<BLACK>(uint64_t& const occupancy) {
+		auto king = pieces[b_king].get_board();
+		if (king == 0) return false;
+
+		auto idx = 63 - __lzcnt64(king);
+		auto rook_queen = (pieces[w_rook] | pieces[w_queen]).get_board();
+		auto bishop_queen = (pieces[w_bishop] | pieces[w_queen]).get_board();
+
+		auto rook_attacks = get_rook_attacks_mask(idx, occupancy);
+		auto bishop_attacks = get_bishop_attacks_mask(idx, occupancy);
+		auto king_attacks = get_king_attack_mask(idx);
+
+		return ((rook_queen & rook_attacks) | (bishop_queen & bishop_attacks))
+			| ((king_attacks & pieces[w_king].get_board()));
+	}
 
 	template <int> void get_pawn_moves(std::vector<Move>&);
 	template <> void get_pawn_moves<WHITE>(std::vector<Move>& moves) {

@@ -19,13 +19,19 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 		std::vector<Move> moves;
 		board.get_moves<WHITE>(moves);
 
-		if (moves.empty()) return { board.evaluate(), {} };
+		if (moves.empty()) {
+			auto mask = board.get_occupancy_mask();
+			bool in_check = board.is_in_check<WHITE>(mask);
+
+			if (in_check) return  { NEG_INF, {} };
+			else return { board.evaluate(), {} };
+		}
 
 		std::sort(moves.begin(), moves.end(), [](auto& a, auto& b) {
 			return a.is_capture > b.is_capture;
 		});
 		
-		float best = NEG_INF;
+		float best = NEG_INF - 1;
 		Move best_move;
 
 		for (auto& move : moves) {
@@ -51,13 +57,19 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 		std::vector<Move> moves;
 		board.get_moves<BLACK>(moves);
 
-		if (moves.empty()) return { board.evaluate(), {} };
+		if (moves.empty()) {
+			auto mask = board.get_occupancy_mask();
+			bool in_check = board.is_in_check<BLACK>(mask);
+
+			if (in_check) return  { INF, {} };
+			else return { board.evaluate(), {} };
+		}
 
 		std::sort(moves.begin(), moves.end(), [](auto& a, auto& b) {
 			return a.is_capture > b.is_capture;
 		});
 
-		float best = INF;
+		float best = INF + 1;
 		Move best_move;
 
 		for (auto& move : moves) {

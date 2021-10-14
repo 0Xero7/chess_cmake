@@ -1,39 +1,42 @@
 
 #include "board.h"
+#include <iostream>
 
 namespace Helpers {
 	void push_back_move_if_valid(Move&& item, std::vector<Move>& container) {
 		if (!item.to_square.is_zero()) container.push_back(item);
 	}
 
-	void generate_and_add_move(color move_color, Board& board, Bitboard& from_square, Bitboard&& to_square, piece_type piece,
-								Bitboard& const our, Bitboard& const opp, std::vector<Move>& container) {
-
-		if ((to_square & ~our).is_zero()) return;
-		
-		bool is_captures = !(to_square & opp).is_zero();
-		int idx = to_square.get_last_set_bit();
-		piece_type captured_piece = is_captures ? board.get_piece_at(idx) : nothing;
-
-		container.push_back(Move(move_color, piece, from_square, to_square, is_captures, captured_piece));
-	}
-
 	void generate_and_add_move(color move_color, Board& board, Bitboard& from_square, Bitboard& to_square, piece_type piece,
-								Bitboard& const our, Bitboard& const opp, std::vector<Move>& container) {
+		Bitboard& const our, Bitboard& const opp, std::vector<Move>& container) {
 
 		if ((to_square & ~our).is_zero()) return;
-		
+
 		bool is_captures = !(to_square & opp).is_zero();
 		int idx = to_square.get_last_set_bit();
 		piece_type captured_piece = is_captures ? board.get_piece_at(idx) : nothing;
 
-		container.push_back(Move(move_color, piece, from_square, to_square, is_captures, captured_piece));
+		auto move = Move(move_color, piece, from_square, to_square, is_captures, captured_piece);
+		board.make_move(move);
+
+		auto occupancy = (our | opp).get_board();
+		if (move_color == WHITE && board.is_in_check<WHITE>(occupancy)) {
+			board.unmake_move(move);
+			return;
+		}
+		if (move_color == BLACK && board.is_in_check<BLACK>(occupancy)) {
+			board.unmake_move(move);
+			return;
+		}
+
+		board.unmake_move(move);
+		container.push_back(move);
 	}
 }
 
 void Board::init_zobrist() {
 	std::random_device rd;
-	std::mt19937 gen(rd()); 
+	std::mt19937 gen(rd());
 	std::uniform_int_distribution<unsigned long long> distrib(0ull, ULLONG_MAX);
 
 	for (int i = 0; i < 64; ++i)
@@ -42,6 +45,26 @@ void Board::init_zobrist() {
 
 	white_move_hash = distrib(gen);
 	black_move_hash = distrib(gen);
+}
+
+uint64_t Board::get_rook_attacks_mask(int square, uint64_t& const occupancy) {
+	uint64_t magic = rook_magics[square];
+	auto xxx = (occupancy & rook_magic_masks[square] & ~(1ull << square));
+	int hash = ((occupancy & rook_magic_masks[square] & ~(1ull << square)) * magic) >> (63 - 13);
+	return rook_attacks[square][hash];
+}
+
+uint64_t Board::get_bishop_attacks_mask(int square, uint64_t& const occupancy) {
+	uint64_t magic = bishop_magics[square];
+	uint64_t hash = ((occupancy & bishop_magic_mask & ~(1ull << square)) * magic) >> (63 - 10);
+	return bishop_attacks[square][hash];
+}
+
+uint64_t Board::get_king_attack_mask(int square) {
+	Bitboard temp((1ull << square));
+	auto collect = (temp.shift<0>()) | (temp.shift<1>()) | (temp.shift<2>()) | (temp.shift<3>())
+		| (temp.shift<4>()) | (temp.shift<5>()) | (temp.shift<6>()) | (temp.shift<7>());
+	return collect.get_board();
 }
 
 piece_type Board::get_piece_at(int square) {
@@ -119,65 +142,6 @@ Bitboard get_attacks(uint64_t pos, uint64_t occupancy) {
 	return attacks;
 }
 
-void Board::init_rook_magics() {
-	std::mt19937_64 engine;
-	std::uniform_int_distribution<unsigned long long> gen(0, ULLONG_MAX);
-	std::mt19937_64 engine2;
-	std::uniform_int_distribution<unsigned long long> gen2(0, ULLONG_MAX);
-
-	for (int i = 0; i < 8; ++i) {
-		for (int j = 0; j < 8; ++j) {
-			uint64_t board = (1ull << (i * 8 + j));
-			uint64_t up = files[j] & ~(files[j] << 8);
-			uint64_t right = ranks[i] & ~(ranks[i] >> 1);
-
-			uint64_t mask = (files[j] & ~(RANK_1 | RANK_8)) | (ranks[i] & ~(FILE_A | FILE_H)) & ~board;
-			rook_magic_masks[(i * 8 + j)] = mask;
-
-			std::vector<uint64_t> occupancies;
-			generate_rook_occupancies(board, up, right, occupancies);
-			std::vector<Bitboard> attacks(occupancies.size());
-			for (int i = 0; i < occupancies.size(); ++i) attacks[i] = get_attacks(board, occupancies[i]);
-
-			std::unordered_map<int, Bitboard> attack;
-			int bits = 63 - 13; // 11 -> 712225451323391987
-			while (1) {
-				uint64_t magic = gen(engine);
-				uint64_t magic2 = gen2(engine2);
-				attack.clear();
-				bool flag = true;
-
-				for (int i = 0; i < occupancies.size(); ++i) {
-					auto occupancy = occupancies[i];
-					int hash = (int)((uint64_t)(magic * magic2 * occupancy) >> bits);
-					auto _attack = attacks[i];
-
-					if (attack.count(hash)) {
-						if (attack[hash] == _attack) continue;
-						else {
-							flag = false;
-							break;
-						}
-					}
-					else {
-						attack[hash] = _attack;
-					}
-				}
-
-				if (flag) {
-					int index = (i * 8) + j;
-					for (auto& [hash, _attack] : attack) {
-						rook_attacks[index][hash] = _attack.get_board();
-					}
-					rook_magics[index] = magic;
-					break;
-				}
-			}
-		}
-	}
-}
-
-
 void generate_occupancies(uint64_t mask, int index, uint64_t bit_mask, std::vector<uint64_t>& collect) {
 	if (index == 64) {
 		collect.push_back(mask);
@@ -189,6 +153,140 @@ void generate_occupancies(uint64_t mask, int index, uint64_t bit_mask, std::vect
 		generate_occupancies(remove, index + 1, bit_mask << 1, collect);
 	}
 	generate_occupancies(mask, index + 1, bit_mask << 1, collect);
+}
+
+
+void Board::init_rook_magics() {
+	std::mt19937_64 engine;
+	std::uniform_int_distribution<unsigned long long> gen(0, ULLONG_MAX);
+	std::mt19937_64 engine2;
+	std::uniform_int_distribution<unsigned long long> gen2(0, ULLONG_MAX);
+
+	auto generate_rook_attacks = [](uint64_t board, uint64_t occupancy) -> uint64_t {
+		auto _occupancy = Bitboard(occupancy);
+		auto _mask = Bitboard(board);
+		auto rook_mask = Bitboard();
+
+		for (int dir = DIR_UP; dir <= DIR_LEFT; ++dir) {
+			auto bit = Bitboard(board).shift(dir);
+
+			while (!bit.is_zero()) {
+				rook_mask = rook_mask | bit;
+
+				if (!(bit & occupancy).is_zero()) break;
+				bit = bit.shift(dir);
+			}
+		}
+
+		return rook_mask.get_board();
+	};
+
+	for (int i = 0; i < 8; ++i) {
+		for (int j = 0; j < 8; ++j) {
+			int square = i * 8 + j;
+			if (square == 36) {
+				int x = 4;
+			}
+			uint64_t board = (1ull << square);
+
+			auto mask = ((files[j] & ~(RANK_1 | RANK_8)) | (ranks[i] & ~(FILE_A | FILE_H))) & ~board;
+			rook_magic_masks[square] = mask;
+
+			std::vector<uint64_t> occupancies;
+			generate_occupancies(mask, 0, 1ull, occupancies);
+			std::vector<uint64_t> attacks;
+			for (auto& occupancy : occupancies) {
+				attacks.push_back(generate_rook_attacks(board, occupancy));
+			}
+
+			int bits = 63 - 13;
+			std::unordered_map<int, uint64_t> _attacks;
+			while (1) {
+				auto magic = gen(engine);
+				_attacks.clear();
+				bool flag = true;
+
+				for (int i = 0; i < occupancies.size(); ++i) {
+					int hash = (int)((occupancies[i] * magic) >> (bits));
+					auto attack = attacks[i];
+
+					if (_attacks.count(hash)) {
+						if (_attacks[hash] != attack) {
+							flag = false;
+							break;
+						}
+					}
+					else {
+						_attacks[hash] = attack;
+					}
+				}
+
+				if (!flag) continue;
+
+				for (auto& [hash, _attack] : _attacks) {
+					rook_attacks[square][hash] = _attack;
+				}
+
+				//printf("%llu\n", magic);
+				rook_magics[square] = magic;
+				break;
+			}
+		}
+	}
+
+	//for (int i = 0; i < 8; ++i) {
+	//	for (int j = 0; j < 8; ++j) {
+	//		uint64_t board = (1ull << (i * 8 + j));
+	//		uint64_t up = files[j] & ~(files[j] << 8);
+	//		uint64_t right = ranks[i] & ~(ranks[i] >> 1);
+
+	//		uint64_t mask = (files[j] & ~(RANK_1 | RANK_8)) | (ranks[i] & ~(FILE_A | FILE_H)) & ~board;
+	//		rook_magic_masks[(i * 8 + j)] = mask;
+
+	//		std::vector<uint64_t> occupancies;
+	//		generate_rook_occupancies(board, up, right, occupancies);
+	//		std::vector<Bitboard> attacks(occupancies.size());
+	//		for (int i = 0; i < occupancies.size(); ++i) attacks[i] = get_attacks(board, occupancies[i]);
+
+	//		std::unordered_map<int, Bitboard> attack;
+	//		int bits = 63 - 13; // 11 -> 712225451323391987
+	//		while (1) {
+	//			uint64_t magic = gen(engine);
+	//			uint64_t magic2 = gen2(engine2);
+	//			attack.clear();
+	//			bool flag = true;
+
+	//			for (int i = 0; i < occupancies.size(); ++i) {
+	//				auto occupancy = occupancies[i];
+	//				if (occupancy == 1125899906842624 && (i * 8 + j) == 48){
+	//					int xxxxx = 4;
+	//				}
+	//				int hash = (int)((uint64_t)(magic * magic2 * occupancy) >> bits);
+	//				auto _attack = attacks[i];
+
+	//				if (attack.count(hash)) {
+	//					if (attack[hash] == _attack) continue;
+	//					else {
+	//						flag = false;
+	//						break;
+	//					}
+	//				}
+	//				else {
+	//					attack[hash] = _attack;
+	//				}
+	//			}
+
+	//			if (flag) {
+	//				int index = (i * 8) + j;
+	//				for (auto& [hash, _attack] : attack) {
+	//					rook_attacks[index][hash] = _attack.get_board();
+	//				}
+	//				rook_magics[index] = magic;
+	//				break;
+	//			}
+	//		}
+	//	}
+	//}
 }
 
 void Board::init_bishop_magics() {
@@ -264,7 +362,7 @@ void Board::init_bishop_magics() {
 			}
 
 			if (flag) {
-				//std::cout << j << " " << rnd * magic << " , " << max_hash << "\n";
+				std::cout << j << " " << rnd * magic << " , " << max_hash << "\n";
 				for (auto [_hash, _attack] : attack_holder)
 					bishop_attacks[j][_hash] = _attack;
 				bishop_magics[j] = rnd * magic;
@@ -310,6 +408,9 @@ void Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const 
 	if (bb.is_zero()) return;
 
 	uint64_t board = bb.get_board();
+	int idx = 63 - __lzcnt64(board);
+	auto occupancy_mask = (our | opp).get_board();
+
 	while (board > 0) {
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
@@ -329,7 +430,7 @@ void Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const 
 	}
 }
 
-void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves) 
+void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
 	if (bb.is_zero()) return;
 
@@ -338,7 +439,7 @@ void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const 
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() & opp.get_board()) & rook_magic_masks[idx];
+		uint64_t occupancy = (our.get_board() | opp.get_board()) & rook_magic_masks[idx];
 		int hash = (rook_magics[idx] * occupancy) >> (63 - 13);
 
 		uint64_t attacks = (rook_attacks[idx][hash] & ~our.get_board());
@@ -354,7 +455,7 @@ void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const 
 	}
 }
 
-void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves) 
+void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
 	if (bb.is_zero()) return;
 
@@ -363,7 +464,7 @@ void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& cons
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() & opp.get_board()) & bishop_magic_mask;
+		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_mask & ~_mask;
 		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
 
 		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
@@ -379,7 +480,7 @@ void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& cons
 	}
 }
 
-void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves) 
+void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
 	if (bb.is_zero()) return;
 
@@ -388,7 +489,7 @@ void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() & opp.get_board()) & bishop_magic_mask;
+		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_mask;
 		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
 		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
 
@@ -416,12 +517,12 @@ template <> void Board::get_moves<WHITE>(std::vector<Move>& moves) {
 	get_rook_moves<WHITE>(moves);
 	get_bishop_moves<WHITE>(moves);
 	get_queen_moves<WHITE>(moves);
-	
+
 	std::random_device rd;
 	std::mt19937 g(rd());
 	sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
 		return a.is_capture > b.is_capture;
-	});
+		});
 	std::shuffle(moves.begin(), moves.end(), g);
 }
 
@@ -437,7 +538,7 @@ template <> void Board::get_moves<BLACK>(std::vector<Move>& moves) {
 	std::mt19937 g(rd());
 	sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
 		return a.is_capture > b.is_capture;
-	});
+		});
 	std::shuffle(moves.begin(), moves.end(), g);
 }
 
@@ -548,4 +649,11 @@ unsigned long long Board::get_hash(uint64_t move_hash) {
 		hash = hash ^ zobrist_hashes[i][piece];
 	}
 	return hash ^ move_hash;
+}
+
+uint64_t Board::get_occupancy_mask() {
+	auto collect = 0ull;
+	for (int i = w_pawn; i <= b_king; ++i)
+		collect = collect | pieces[i].get_board();
+	return collect;
 }
