@@ -17,10 +17,12 @@ int main()
 	//bishop_masks();
 	//getchar();
 
-	Board board("7k/8/R7/R7/8/5K2/8/8");// "6k1/4Q3/8/6K1/8/8/8/8");// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
+	Board board("5r1k/6pp/6p1/8/2B1Q2R/8/6PP/7K");// 7k / 8 / R7 / R7 / 8 / 5K2 / 8 / 8");// "6k1 / 4Q3 / 8 / 6K1 / 8 / 8 / 8 / 8");// "rnbqkbnr / pppppppp / 8 / 8 / 8 / 8 / PPPPPPPP / RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
 	
 	std::vector<Move> moves;
-	board.get_moves<WHITE>(moves);
+	board.get_moves<BLACK>(moves);
+	auto x = board.get_occupancy_mask() ^ (1ull << 22);
+	DEBUG::show_uint64(board.get_bishop_attacks_mask(22, x));
 
 	DEBUG::show_board(board);
 	getchar();
@@ -30,12 +32,18 @@ int main()
 		table.clear();
 		table.reserve(1024ll * 1024ll * 100ll);
 
-		auto [score, move] = minimax(board, white, 6, NEG_INF, INF);
+		auto [score, move] = minimax(board, white, 0, 6, NEG_INF, INF);
 		if (move.to_square.is_zero()) break;
 		system("cls");
 		board.make_move(move);
 		DEBUG::show_board(board);
-		printf("%f\n", score);
+
+		if (score > INF) {
+			printf("M%d\n", (int)(score - INF));
+		}
+		else {
+			printf("%f\n", score);
+		}
 		white = !white;
 
 		getchar();

@@ -56,7 +56,7 @@ uint64_t Board::get_rook_attacks_mask(int square, uint64_t& const occupancy) {
 
 uint64_t Board::get_bishop_attacks_mask(int square, uint64_t& const occupancy) {
 	uint64_t magic = bishop_magics[square];
-	uint64_t hash = ((occupancy & bishop_magic_mask & ~(1ull << square)) * magic) >> (63 - 10);
+	uint64_t hash = ((occupancy & bishop_magic_masks[square]) * magic) >> (63 - 10);
 	return bishop_attacks[square][hash];
 }
 
@@ -233,60 +233,6 @@ void Board::init_rook_magics() {
 			}
 		}
 	}
-
-	//for (int i = 0; i < 8; ++i) {
-	//	for (int j = 0; j < 8; ++j) {
-	//		uint64_t board = (1ull << (i * 8 + j));
-	//		uint64_t up = files[j] & ~(files[j] << 8);
-	//		uint64_t right = ranks[i] & ~(ranks[i] >> 1);
-
-	//		uint64_t mask = (files[j] & ~(RANK_1 | RANK_8)) | (ranks[i] & ~(FILE_A | FILE_H)) & ~board;
-	//		rook_magic_masks[(i * 8 + j)] = mask;
-
-	//		std::vector<uint64_t> occupancies;
-	//		generate_rook_occupancies(board, up, right, occupancies);
-	//		std::vector<Bitboard> attacks(occupancies.size());
-	//		for (int i = 0; i < occupancies.size(); ++i) attacks[i] = get_attacks(board, occupancies[i]);
-
-	//		std::unordered_map<int, Bitboard> attack;
-	//		int bits = 63 - 13; // 11 -> 712225451323391987
-	//		while (1) {
-	//			uint64_t magic = gen(engine);
-	//			uint64_t magic2 = gen2(engine2);
-	//			attack.clear();
-	//			bool flag = true;
-
-	//			for (int i = 0; i < occupancies.size(); ++i) {
-	//				auto occupancy = occupancies[i];
-	//				if (occupancy == 1125899906842624 && (i * 8 + j) == 48){
-	//					int xxxxx = 4;
-	//				}
-	//				int hash = (int)((uint64_t)(magic * magic2 * occupancy) >> bits);
-	//				auto _attack = attacks[i];
-
-	//				if (attack.count(hash)) {
-	//					if (attack[hash] == _attack) continue;
-	//					else {
-	//						flag = false;
-	//						break;
-	//					}
-	//				}
-	//				else {
-	//					attack[hash] = _attack;
-	//				}
-	//			}
-
-	//			if (flag) {
-	//				int index = (i * 8) + j;
-	//				for (auto& [hash, _attack] : attack) {
-	//					rook_attacks[index][hash] = _attack.get_board();
-	//				}
-	//				rook_magics[index] = magic;
-	//				break;
-	//			}
-	//		}
-	//	}
-	//}
 }
 
 void Board::init_bishop_magics() {
@@ -295,17 +241,21 @@ void Board::init_bishop_magics() {
 		Bitboard mask;
 
 		auto generate_attacks = [](Bitboard square, uint64_t _occupancy) -> Bitboard {
-			auto outer_mask = Bitboard(FILE_A | FILE_H | RANK_1 | RANK_8);
 			auto mask = Bitboard();
+			auto occupancy = Bitboard(_occupancy);
+
+			if (_occupancy == 594475150812987392 && square.get_last_set_bit() == 22) {
+				int y = 2;
+			}
 
 			for (int dir = DIR_UP_RIGHT; dir <= DIR_UP_LEFT; ++dir) {
-				auto bit_mask = square;
+				Bitboard bit_mask = square;
 				while (1) {
 					bit_mask = bit_mask.shift(dir);
 					if (bit_mask.is_zero()) break;
 
 					mask = mask | bit_mask;
-					if (!(bit_mask & _occupancy).is_zero()) break;
+					if (!(bit_mask & occupancy).is_zero()) break;
 				}
 			}
 
@@ -322,7 +272,8 @@ void Board::init_bishop_magics() {
 			}
 		}
 
-		mask = mask & ~(FILE_A | FILE_H | RANK_1 | RANK_8);
+		mask = mask & ~(FILE_A | FILE_H | RANK_1 | RANK_8) & ~(sq);
+		bishop_magic_masks[j] = mask.get_board();
 
 		std::vector<uint64_t> occupancies;
 		generate_occupancies(mask.get_board(), 0, 1ull, occupancies);
@@ -464,7 +415,7 @@ void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& cons
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_mask & ~_mask;
+		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_masks[idx] & ~_mask;
 		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
 
 		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
@@ -489,7 +440,7 @@ void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_mask;
+		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_masks[idx];
 		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
 		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
 

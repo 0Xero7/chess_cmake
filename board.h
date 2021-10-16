@@ -29,7 +29,7 @@ private:
 
 	std::array<std::array<uint64_t, 2048>, 64> bishop_attacks;
 	std::array<uint64_t, 64> bishop_magics;
-	const uint64_t bishop_magic_mask = ~(FILE_A | FILE_H | RANK_1 | RANK_8);
+	std::array<uint64_t, 64> bishop_magic_masks;
 	void init_bishop_magics();
 
 	uint64_t Board::get_king_attack_mask(int);

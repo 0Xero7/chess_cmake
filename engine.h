@@ -7,7 +7,7 @@
 
 std::unordered_map<unsigned long long, std::pair<float, Move>> table;
 
-std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha, float beta) {
+std::pair<float, Move> minimax(Board& board, bool white, int cur_depth, int depth, float alpha, float beta) {
 	if (depth == 0) 
 		return { board.evaluate(), {} };
 
@@ -23,7 +23,7 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 			auto mask = board.get_occupancy_mask();
 			bool in_check = board.is_in_check<WHITE>(mask);
 
-			if (in_check) return  { NEG_INF, {} };
+			if (in_check) return  { NEG_INF - depth - 1, {} };
 			else return { board.evaluate(), {} };
 		}
 
@@ -31,12 +31,12 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 			return a.is_capture > b.is_capture;
 		});
 		
-		float best = NEG_INF - 1;
+		float best = 2 * NEG_INF - 1;
 		Move best_move;
 
 		for (auto& move : moves) {
 			board.make_move(move);
-			auto [score, _] = minimax(board, false, depth - 1, alpha, beta);
+			auto [score, _] = minimax(board, false, cur_depth + 1, depth - 1, alpha, beta);
 			board.unmake_move(move);
 
 			alpha = std::max(alpha, score);
@@ -61,7 +61,7 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 			auto mask = board.get_occupancy_mask();
 			bool in_check = board.is_in_check<BLACK>(mask);
 
-			if (in_check) return  { INF, {} };
+			if (in_check) return  { INF + depth + 1, {} };
 			else return { board.evaluate(), {} };
 		}
 
@@ -69,12 +69,12 @@ std::pair<float, Move> minimax(Board& board, bool white, int depth, float alpha,
 			return a.is_capture > b.is_capture;
 		});
 
-		float best = INF + 1;
+		float best = 2 * INF + 1;
 		Move best_move;
 
 		for (auto& move : moves) {
 			board.make_move(move);
-			auto [score, _] = minimax(board, true, depth - 1, alpha, beta);
+			auto [score, _] = minimax(board, true, cur_depth + 1, depth - 1, alpha, beta);
 			board.unmake_move(move);
 
 			beta = std::min(beta, score);
