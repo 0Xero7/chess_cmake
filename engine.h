@@ -23,8 +23,8 @@ std::pair<float, Move> minimax(Board& board, bool white, int cur_depth, int dept
 			auto mask = board.get_occupancy_mask();
 			bool in_check = board.is_in_check<WHITE>(mask);
 
-			if (in_check) return  { NEG_INF - depth - 1, {} };
-			else return { board.evaluate(), {} };
+			if (in_check) return table[hash] = { NEG_INF - depth - 1, {} };
+			else return table[hash] = { board.evaluate(), {} };
 		}
 
 		std::sort(moves.begin(), moves.end(), [](auto& a, auto& b) {
@@ -61,8 +61,8 @@ std::pair<float, Move> minimax(Board& board, bool white, int cur_depth, int dept
 			auto mask = board.get_occupancy_mask();
 			bool in_check = board.is_in_check<BLACK>(mask);
 
-			if (in_check) return  { INF + depth + 1, {} };
-			else return { board.evaluate(), {} };
+			if (in_check) return  table[hash] = { INF + depth + 1, {} };
+			else return table[hash] = { board.evaluate(), {} };
 		}
 
 		std::sort(moves.begin(), moves.end(), [](auto& a, auto& b) {

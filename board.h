@@ -70,6 +70,7 @@ public:
 		for (piece_type w = w_pawn; w <= w_king; ++w) white_pieces = white_pieces | pieces[w];
 		for (piece_type b = b_pawn; b <= b_king; ++b) black_pieces = black_pieces | pieces[b];
 	}
+	uint64_t Board::get_knight_attack_mask(int);
 
 	uint64_t white_move_hash, black_move_hash;
 
@@ -89,13 +90,15 @@ public:
 		auto idx = 63 - __lzcnt64(king);
 		auto rook_queen = (pieces[b_rook] | pieces[b_queen]).get_board();
 		auto bishop_queen = (pieces[b_bishop] | pieces[b_queen]).get_board();
+		auto knight = (pieces[b_knight]).get_board();
 
 		auto rook_attacks = get_rook_attacks_mask(idx, occupancy);
 		auto bishop_attacks = get_bishop_attacks_mask(idx, occupancy);
 		auto king_attacks = get_king_attack_mask(idx);
+		auto knight_attacks = get_knight_attack_mask(idx);
 
 		return ((rook_queen & rook_attacks) | (bishop_queen & bishop_attacks)) 
-			| ((king_attacks & pieces[b_king].get_board()));
+			| ((king_attacks & pieces[b_king].get_board())) | (knight & knight_attacks);
 	}
 
 	template <> bool is_in_check<BLACK>(uint64_t& const occupancy) {
@@ -105,13 +108,15 @@ public:
 		auto idx = 63 - __lzcnt64(king);
 		auto rook_queen = (pieces[w_rook] | pieces[w_queen]).get_board();
 		auto bishop_queen = (pieces[w_bishop] | pieces[w_queen]).get_board();
+		auto knight = (pieces[w_knight]).get_board();
 
 		auto rook_attacks = get_rook_attacks_mask(idx, occupancy);
 		auto bishop_attacks = get_bishop_attacks_mask(idx, occupancy);
 		auto king_attacks = get_king_attack_mask(idx);
+		auto knight_attacks = get_knight_attack_mask(idx);
 
 		return ((rook_queen & rook_attacks) | (bishop_queen & bishop_attacks))
-			| ((king_attacks & pieces[w_king].get_board()));
+			| ((king_attacks & pieces[w_king].get_board())) | (knight & knight_attacks);
 	}
 
 	template <int> void get_pawn_moves(std::vector<Move>&);

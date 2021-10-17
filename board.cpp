@@ -67,6 +67,19 @@ uint64_t Board::get_king_attack_mask(int square) {
 	return collect.get_board();
 }
 
+uint64_t Board::get_knight_attack_mask(int square) {
+	auto temp = Bitboard((1ull << square));
+	auto up = temp.shift_up_2();
+	auto down = temp.shift_down_2();
+	auto left = temp.shift_left_2();
+	auto right = temp.shift_right_2();
+	
+	auto collect = (up.shift<DIR_RIGHT>() | up.shift<DIR_LEFT>()) | (down.shift<DIR_RIGHT>() | down.shift<DIR_LEFT>()) |
+		(left.shift<DIR_UP>() | left.shift<DIR_DOWN>()) | (right.shift<DIR_UP>() | right.shift<DIR_DOWN>());
+
+	return collect.get_board();
+}
+
 piece_type Board::get_piece_at(int square) {
 	for (piece_type piece = w_pawn; piece <= b_king; ++piece) {
 		if (this->pieces[piece].test(square))
@@ -313,7 +326,6 @@ void Board::init_bishop_magics() {
 			}
 
 			if (flag) {
-				std::cout << j << " " << rnd * magic << " , " << max_hash << "\n";
 				for (auto [_hash, _attack] : attack_holder)
 					bishop_attacks[j][_hash] = _attack;
 				bishop_magics[j] = rnd * magic;
