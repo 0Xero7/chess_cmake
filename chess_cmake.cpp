@@ -17,7 +17,7 @@ int main()
 	//bishop_masks();
 	//getchar();
 
-	Board board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");// 7k / 8 / R7 / R7 / 8 / 5K2 / 8 / 8");// "6k1 / 4Q3 / 8 / 6K1 / 8 / 8 / 8 / 8");// "rnbqkbnr / pppppppp / 8 / 8 / 8 / 8 / PPPPPPPP / RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
+	Board board("7k/7P/6P1/8/6RR/8/3K4/8");// 7k / 8 / R7 / R7 / 8 / 5K2 / 8 / 8");// "6k1 / 4Q3 / 8 / 6K1 / 8 / 8 / 8 / 8");// "rnbqkbnr / pppppppp / 8 / 8 / 8 / 8 / PPPPPPPP / RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
 	
 	auto x = board.get_occupancy_mask();
 
