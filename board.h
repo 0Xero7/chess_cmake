@@ -4,6 +4,7 @@
 #include <vector>
 #include "commons.h"
 #include "bitboard.h"
+#include "eval_constants.h"
 #include "move.h"
 #include <unordered_map>
 #include <ctype.h>
@@ -25,7 +26,6 @@ private:
 	std::array<uint64_t, 64> rook_magics;
 	std::array<uint64_t, 64> rook_magic_masks;
 	void init_rook_magics(); 
-	uint64_t Board::get_rook_attacks_mask(int, uint64_t& const);
 
 	std::array<std::array<uint64_t, 2048>, 64> bishop_attacks;
 	std::array<uint64_t, 64> bishop_magics;
@@ -80,6 +80,7 @@ public:
 	unsigned long long get_hash(uint64_t);
 
 	template <int> void get_moves(std::vector<Move>&);
+	uint64_t Board::get_rook_attacks_mask(int, uint64_t& const);
 	uint64_t Board::get_bishop_attacks_mask(int, uint64_t& const);
 
 	template <int> bool is_in_check(uint64_t& const);

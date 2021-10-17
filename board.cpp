@@ -397,15 +397,17 @@ void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const 
 {
 	if (bb.is_zero()) return;
 
+	auto occupancy = (our | opp).get_board();
 	uint64_t board = bb.get_board();
+
 	while (board > 0) {
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() | opp.get_board()) & rook_magic_masks[idx];
-		int hash = (rook_magics[idx] * occupancy) >> (63 - 13);
 
-		uint64_t attacks = (rook_attacks[idx][hash] & ~our.get_board());
+		auto attacks = get_rook_attacks_mask(idx, occupancy);
+		attacks = attacks & ~our.get_board();
+		
 		while (attacks) {
 			int index = 63 - __lzcnt64(attacks);
 			uint64_t move_mask = (1ull << index);
@@ -422,15 +424,17 @@ void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& cons
 {
 	if (bb.is_zero()) return;
 
+	auto occupancy = (our | opp).get_board();
 	uint64_t board = bb.get_board();
+
 	while (board > 0) {
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_masks[idx] & ~_mask;
-		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
 
-		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
+		auto attacks = get_bishop_attacks_mask(idx, occupancy); 
+		attacks = attacks & ~our.get_board();
+
 		while (attacks) {
 			int index = 63 - __lzcnt64(attacks);
 			uint64_t move_mask = (1ull << index);
@@ -447,18 +451,16 @@ void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const
 {
 	if (bb.is_zero()) return;
 
-	uint64_t board = bb.get_board();
+	auto occupancy = (our | opp).get_board();
+	uint64_t board = bb.get_board(); 
+
 	while (board > 0) {
 		int idx = 63 - __lzcnt64(board);
 		uint64_t _mask = (1ull << idx);
 		auto mask = Bitboard(_mask);
-		uint64_t occupancy = (our.get_board() | opp.get_board()) & bishop_magic_masks[idx];
-		int hash = (bishop_magics[idx] * occupancy) >> (63 - 10);
-		uint64_t attacks = (bishop_attacks[idx][hash] & ~our.get_board());
 
-		occupancy = (our.get_board() & opp.get_board()) & rook_magic_masks[idx];
-		hash = (rook_magics[idx] * occupancy) >> (63 - 13);
-		attacks = attacks | (rook_attacks[idx][hash] & ~our.get_board());
+		auto attacks = (get_rook_attacks_mask(idx, occupancy) | get_bishop_attacks_mask(idx, occupancy));
+		attacks = attacks & ~our.get_board();
 
 		while (attacks) {
 			int index = 63 - __lzcnt64(attacks);
@@ -483,10 +485,10 @@ template <> void Board::get_moves<WHITE>(std::vector<Move>& moves) {
 
 	std::random_device rd;
 	std::mt19937 g(rd());
-	sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
+	/*sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
 		return a.is_capture > b.is_capture;
-		});
-	std::shuffle(moves.begin(), moves.end(), g);
+		});*/
+	//std::shuffle(moves.begin(), moves.end(), g);
 }
 
 template <> void Board::get_moves<BLACK>(std::vector<Move>& moves) {
@@ -499,10 +501,10 @@ template <> void Board::get_moves<BLACK>(std::vector<Move>& moves) {
 
 	std::random_device rd;
 	std::mt19937 g(rd());
-	sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
+	/*sort(moves.begin(), moves.end(), [](Move& a, Move& b) {
 		return a.is_capture > b.is_capture;
-		});
-	std::shuffle(moves.begin(), moves.end(), g);
+		});*/
+	//std::shuffle(moves.begin(), moves.end(), g);
 }
 
 
@@ -595,12 +597,53 @@ void Board::unmake_move(Move& move) {
 }
 
 float Board::evaluate() {
-	return (this->pieces[w_knight].set_bits() - this->pieces[b_knight].set_bits()) * 3
-		+ (this->pieces[w_bishop].set_bits() - this->pieces[b_bishop].set_bits()) * 3
-		+ (this->pieces[w_queen].set_bits() - this->pieces[b_queen].set_bits()) * 9
-		+ (this->pieces[w_rook].set_bits() - this->pieces[b_rook].set_bits()) * 5
-		+ (this->pieces[w_pawn].set_bits() - this->pieces[b_pawn].set_bits()) * 1
-		+ (this->pieces[w_king].set_bits() - this->pieces[b_king].set_bits()) * 1000;
+	std::vector<Move> collect_w, collect_b;
+	get_moves<WHITE>(collect_w);
+	get_moves<BLACK>(collect_b);
+	bool endgame = (__popcnt64(get_occupancy_mask()) < 12);
+
+	int PSQ = 0;
+	for (int i = 0; i < 64; ++i) {
+		switch (get_piece_at(i)) {
+		case w_pawn: PSQ += PSQ_PAWN[i];
+			break;
+		case w_rook: PSQ += PSQ_ROOK[i];
+			break;
+		case w_knight: PSQ += PSQ_KNIGHT[i];
+			break;
+		case w_bishop: PSQ += PSQ_BISHOP[i];
+			break;
+		case w_queen: PSQ += PSQ_QUEEN[i];
+			break;
+		case w_king: PSQ += (endgame ? PSQ_END_KING[i] : PSQ_MID_KING[i]);
+			break;
+
+		case b_pawn: PSQ += PSQ_PAWN[63 - i];
+			break;
+		case b_rook: PSQ += PSQ_ROOK[63 - i];
+			break;
+		case b_knight: PSQ += PSQ_KNIGHT[63 - i];
+			break;
+		case b_bishop: PSQ += PSQ_BISHOP[63 - i];
+			break;
+		case b_queen: PSQ += PSQ_QUEEN[63 - i];
+			break;
+		case b_king: PSQ += (endgame ? PSQ_END_KING[63 - i] : PSQ_MID_KING[63 - i]);
+			break;
+		}
+	}
+	
+
+	return (this->pieces[w_knight].set_bits() - this->pieces[b_knight].set_bits()) * KNIGHT_SCORE
+		+ (this->pieces[w_bishop].set_bits() - this->pieces[b_bishop].set_bits()) * BISHOP_SCORE
+		+ (this->pieces[w_queen].set_bits() - this->pieces[b_queen].set_bits()) * QUEEN_SCORE
+		+ (this->pieces[w_rook].set_bits() - this->pieces[b_rook].set_bits()) * ROOK_SCORE
+		+ (this->pieces[w_pawn].set_bits() - this->pieces[b_pawn].set_bits()) * PAWN_SCORE
+		+ (this->pieces[w_king].set_bits() - this->pieces[b_king].set_bits()) * KING_SCORE
+		
+		+ PSQ
+
+		+ ((int)collect_w.size() - (int)collect_b.size()) * 30;
 }
 
 
