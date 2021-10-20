@@ -25,8 +25,8 @@ public:
 								
 	Bitboard shift_up_2()		{ return board << 16; }
 	Bitboard shift_down_2()		{ return board >> 16; }
-	Bitboard shift_left_2()		{ return (board & ~(FILE_A | FILE_B)) << 2; }
-	Bitboard shift_right_2()	{ return (board & ~(FILE_G | FILE_H)) >> 2; }
+	Bitboard shift_left_2()		{ return (board & MASK_LEFT_2) << 2; }
+	Bitboard shift_right_2()	{ return (board & MASK_RIGHT_2) >> 2; }
 
 	Bitboard shift_up_right()	{ return ((board << 8) & ~FILE_H) >> 1; }
 	Bitboard shift_up_left()	{ return ((board << 8) & ~FILE_A) << 1; }
@@ -62,16 +62,16 @@ public:
 	
 	Bitboard operator & (const Bitboard& board) { return Bitboard(board.board & this->board); }
 	Bitboard operator | (const Bitboard& board) { return Bitboard(board.board | this->board); }
-	Bitboard operator ^ (const Bitboard& board) { return Bitboard(board.board ^ this->board); }
-	Bitboard operator >> (const int shift)		{ return Bitboard(this->board >> shift); }
-	Bitboard operator << (const int shift)		{ return Bitboard(this->board << shift); }
+	inline Bitboard operator ^ (const Bitboard& board) { return Bitboard(board.board ^ this->board); }
+	Bitboard operator >> (const int shift)		{ return Bitboard(shift > 0 ? (this->board >> shift) : (this->board << -shift)); }
+	Bitboard operator << (const int shift)		{ return Bitboard(shift > 0 ? (this->board << shift) : (this->board >> -shift)); }
 
 	Bitboard operator |= (const Bitboard& board){ this->board |= board.board; return *this; }
 
 	Bitboard operator ~ ()						{ return ~this->board; }
 
-	Bitboard& operator ^= (const Bitboard& rhs) {
-		this->board ^= rhs.board;
-		return *this;
+	inline Bitboard& operator ^= (const Bitboard& rhs) {
+		return (this->board ^= rhs.board, *this);
+		//return *this;
 	}
 };

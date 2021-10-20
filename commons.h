@@ -5,6 +5,13 @@ constexpr float NEG_INF = -INF;
 
 #define nothing		-1
 
+#define delta_pawn		0
+#define delta_rook		1
+#define delta_knight	2
+#define delta_bishop	3
+#define delta_queen		4
+#define delta_king		5
+
 #define w_pawn		0
 #define w_rook		1
 #define w_knight	2
@@ -55,6 +62,9 @@ constexpr auto RANK_6 = (RANK_5 << 8);
 constexpr auto RANK_7 = (RANK_6 << 8);
 constexpr auto RANK_8 = (RANK_7 << 8);
 constexpr uint64_t ranks[8] = { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8 };
+
+constexpr auto MASK_LEFT_2 = ~(FILE_A | FILE_B);
+constexpr auto MASK_RIGHT_2 = ~(FILE_G | FILE_H);
 
 constexpr auto H1 = (1ull);
 constexpr auto G1 =	(H1 << 1);
@@ -127,3 +137,40 @@ constexpr auto D8 = (E8 << 1);
 constexpr auto C8 = (D8 << 1);
 constexpr auto B8 = (C8 << 1);
 constexpr auto A8 = (B8 << 1);
+
+constexpr uint64_t main_diagonals[15] = 
+{ 
+	72624976668147840, 283691315109952, 1108169199648, 4328785936,
+	16909320, 66052, 258, 1,
+	145249953336295424, 290499906672525312, 580999813328273408, 1161999622361579520,
+	2323998145211531264, 4647714815446351872, 9223372036854775808
+};
+
+constexpr uint64_t main_diagonal_index[64] = {
+	7, 6, 5, 4, 3, 2, 1, 0,
+	6, 5, 4, 3, 2, 1, 0, 8,
+	5, 4, 3, 2, 1, 0, 8, 9,
+	4, 3, 2, 1, 0, 8, 9, 10,
+	3, 2, 1, 0, 8, 9, 10, 11,
+	2, 1, 0, 8, 9, 10, 11, 12,
+	1, 0, 8, 9, 10, 11, 12, 13,
+	0, 8, 9, 10, 11, 12, 13, 14
+};
+
+constexpr uint64_t anti_diagonals[15] =
+{
+	9241421688590303745, 4620710844295151872, 2310355422147575808, 1155177711073755136, 
+	577588855528488960, 288794425616760832, 144396663052566528, 72057594037927936,
+	36099303471055874, 141012904183812, 550831656968, 2151686160, 8405024, 32832, 128
+};
+
+constexpr uint64_t anti_diagonal_index[64] = {
+	0, 8, 9, 10, 11, 12, 13, 14,
+	1, 0, 8, 9, 10, 11, 12, 13,
+	2, 1, 0, 8, 9, 10, 11, 12,
+	3, 2, 1, 0, 8, 9, 10, 11,
+	4, 3, 2, 1, 0, 8, 9, 10,
+	5, 4, 3, 2, 1, 0, 8, 9,
+	6, 5, 4, 3, 2, 1, 0, 8,
+	7, 6, 5, 4, 3, 2, 1, 0
+};

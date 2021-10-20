@@ -19,6 +19,8 @@ private:
 	Bitboard white_pieces;
 	Bitboard black_pieces;
 
+	void init_pieces() { for (auto& piece : piece_on_square) piece = nothing; }
+
 	void _get_w_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&, std::vector<Move>&);
 	void _get_b_pawn_moves(color, piece_type, Bitboard&, Bitboard&, Bitboard&, std::vector<Move>&);
 
@@ -36,7 +38,8 @@ private:
 
 	void init_zobrist();
 public:
-	Board() { 
+	Board() {
+		init_pieces();
 		init_zobrist();
 		init_rook_magics();
 		printf("rook magics done\n");
@@ -45,6 +48,7 @@ public:
 	}
 
 	Board(std::string fen) {
+		init_pieces();
 		init_zobrist();
 		init_rook_magics();
 		printf("rook magics done\n");
@@ -60,9 +64,11 @@ public:
 
 		for (char c : fen) {
 			if (c == '/') continue;
-			if (isdigit(c)) idx -= (c - '0');
+			if (isdigit(c))
+				idx -= (c - '0');
 			else {
 				pieces[notation_to_piece.at(c)] |= (1ull << idx);
+				piece_on_square[idx] = notation_to_piece.at(c);
 				--idx;
 			}
 		}
@@ -168,6 +174,17 @@ public:
 		_get_rook_moves(BLACK, b_rook, pieces[b_rook], black_pieces, white_pieces, moves);
 	}
 	void _get_rook_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+
+	void get_vfast_rook_moves(std::vector<Move>&);
+
+	template <int> void get_fast_rook_moves(std::vector<Move>&);
+	template <> void get_fast_rook_moves<WHITE>(std::vector<Move>& moves) {
+		_get_fast_rook_moves(WHITE, 6, w_rook, pieces[w_rook], white_pieces, black_pieces, moves);
+	}
+	template <> void get_fast_rook_moves<BLACK>(std::vector<Move>& moves) {
+		_get_fast_rook_moves(BLACK, 0, b_rook, pieces[b_rook], black_pieces, white_pieces, moves);
+	}
+	void _get_fast_rook_moves(color move_color, color other_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 
 	template <int> void get_bishop_moves(std::vector<Move>&);
