@@ -175,7 +175,7 @@ public:
 	}
 	void _get_rook_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
-	void get_vfast_rook_moves(std::vector<Move>&);
+	void get_vfast_bishop_moves(std::vector<Move>&);
 
 	template <int> void get_fast_rook_moves(std::vector<Move>&);
 	template <> void get_fast_rook_moves<WHITE>(std::vector<Move>& moves) {
@@ -185,6 +185,15 @@ public:
 		_get_fast_rook_moves(BLACK, 0, b_rook, pieces[b_rook], black_pieces, white_pieces, moves);
 	}
 	void _get_fast_rook_moves(color move_color, color other_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+	
+	template <int> void get_fast_bishop_moves(std::vector<Move>&);
+	template <> void get_fast_bishop_moves<WHITE>(std::vector<Move>& moves) {
+		_get_fast_bishop_moves(WHITE, 6, w_bishop, pieces[w_bishop], white_pieces, black_pieces, moves);
+	}
+	template <> void get_fast_bishop_moves<BLACK>(std::vector<Move>& moves) {
+		_get_fast_rook_moves(BLACK, 0, b_bishop, pieces[b_bishop], black_pieces, white_pieces, moves);
+	}
+	void _get_fast_bishop_moves(color move_color, color other_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 
 	template <int> void get_bishop_moves(std::vector<Move>&);
