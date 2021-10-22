@@ -153,6 +153,16 @@ public:
 		_get_b_pawn_moves(BLACK, b_pawn, pieces[b_pawn], black_pieces, white_pieces, moves);
 	}
 
+	template <int> void get_fast_pawn_moves(std::vector<Move>&);
+	template <> void get_fast_pawn_moves<WHITE>(std::vector<Move>& moves) {
+		_get_w_fast_pawn_moves(WHITE, w_pawn, pieces[w_pawn], white_pieces, black_pieces, moves);
+	}
+	template <> void get_fast_pawn_moves<BLACK>(std::vector<Move>& moves) {
+		_get_b_fast_pawn_moves(BLACK, b_pawn, pieces[b_pawn], black_pieces, white_pieces, moves);
+	}
+	void _get_w_fast_pawn_moves(color, color, Bitboard& const, Bitboard& const, Bitboard& const, std::vector<Move>&);
+	void _get_b_fast_pawn_moves(color, color, Bitboard& const, Bitboard& const, Bitboard& const, std::vector<Move>&);
+
 
 
 	template <int> void get_knight_moves(std::vector<Move>&);

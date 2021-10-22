@@ -878,6 +878,70 @@ void Board::_get_w_pawn_moves(color move_color, piece_type piece, Bitboard& cons
 	}
 }
 
+void Board::_get_w_fast_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
+{
+	if (bb.is_zero()) return;
+
+	auto wking = (pieces[w_king]).get_board();
+	auto b_hor = (pieces[b_rook] | pieces[b_queen]).get_board();
+	auto b_diag = (pieces[b_bishop] | pieces[b_queen]).get_board();
+	auto occupancy_mask = get_occupancy_mask();
+
+	uint64_t board = bb.get_board();
+	while (board > 0) {
+		int idx = 63 - __lzcnt64(board);
+		uint64_t _mask = (1ull << idx);
+		Bitboard mask = Bitboard(_mask);
+
+		Bitboard move_mask;
+
+		auto vertical_moves = (_mask << 8) & ~occupancy_mask;
+		vertical_moves |= ((vertical_moves << 8) & ~occupancy_mask) * __popcnt64(_mask & RANK_2);
+
+		auto main_diag_capture = (mask.shift<DIR_UP_RIGHT>() & opp).get_board();
+		auto anti_diag_capture = (mask.shift<DIR_UP_LEFT>() & opp).get_board();
+
+		int rank = (idx >> 3);
+		int file = idx - (rank << 3);
+
+		auto rank_mask = ranks[rank];
+		auto file_mask = files[file];
+
+		auto rook_attacks = get_rook_attacks_mask(idx, occupancy_mask);
+		auto rank_attacks = (rook_attacks & rank_mask);
+		auto file_attacks = (rook_attacks & file_mask);
+
+		bool is_rank_blocker = ((rank_attacks & wking) && (rank_attacks & b_hor));
+		bool is_file_blocker = ((file_attacks & wking) && (file_attacks & b_hor));
+
+		auto is_rook_blocker = (is_rank_blocker || is_file_blocker);
+
+		// Diagonal attack check
+		auto bishop_attacks = get_bishop_attacks_mask(idx, occupancy_mask);
+		auto main_diag_attacks = (bishop_attacks & main_diagonals[main_diagonal_index[idx]]);
+		auto anti_diag_attacks = (bishop_attacks & anti_diagonals[anti_diagonal_index[idx]]);
+
+		bool is_main_diag_blocker = ((main_diag_attacks & wking) && (main_diag_attacks & b_diag));
+		bool is_anti_diag_blocker = ((anti_diag_attacks & wking) && (anti_diag_attacks & b_diag));
+
+		auto is_diagonal_blocker = (is_main_diag_blocker || is_anti_diag_blocker);
+
+		auto correct_moves = ((vertical_moves * !(is_diagonal_blocker))
+			| (main_diag_capture * !(is_file_blocker || is_anti_diag_blocker))
+			| (anti_diag_capture * !(is_file_blocker || is_main_diag_blocker))) * (!is_rank_blocker);
+
+		while (correct_moves) {
+			int index = 63 - __lzcnt64(correct_moves);
+			uint64_t move_mask = (1ull << index);
+			correct_moves ^= move_mask;
+
+			moves.emplace_back(move_color, piece, mask, move_mask, true, piece_on_square[index]);
+		}
+
+		board ^= _mask;
+	}
+}
+
 void Board::_get_b_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
 	if (bb.is_zero());
@@ -900,6 +964,70 @@ void Board::_get_b_pawn_moves(color move_color, piece_type piece, Bitboard& cons
 		Helpers::generate_and_add_move(BLACK, *this, mask, cap_left, b_pawn, our, opp, moves);
 		auto cap_right = mask.shift_down().shift_right() & opp;
 		Helpers::generate_and_add_move(BLACK, *this, mask, cap_right, b_pawn, our, opp, moves);
+
+		board ^= _mask;
+	}
+}
+
+void Board::_get_b_fast_pawn_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
+{
+	if (bb.is_zero()) return;
+
+	auto wking = (pieces[b_king]).get_board();
+	auto b_hor = (pieces[w_rook] | pieces[w_queen]).get_board();
+	auto b_diag = (pieces[w_bishop] | pieces[w_queen]).get_board();
+	auto occupancy_mask = get_occupancy_mask();
+
+	uint64_t board = bb.get_board();
+	while (board > 0) {
+		int idx = 63 - __lzcnt64(board);
+		uint64_t _mask = (1ull << idx);
+		Bitboard mask = Bitboard(_mask);
+
+		Bitboard move_mask;
+
+		auto vertical_moves = (_mask >> 8) & ~occupancy_mask;
+		vertical_moves |= ((vertical_moves >> 8) & ~occupancy_mask) * __popcnt64(_mask & RANK_7);
+
+		auto main_diag_capture = (mask.shift<DIR_DOWN_LEFT>() & opp).get_board();
+		auto anti_diag_capture = (mask.shift<DIR_DOWN_RIGHT>() & opp).get_board();
+
+		int rank = (idx >> 3);
+		int file = idx - (rank << 3);
+
+		auto rank_mask = ranks[rank];
+		auto file_mask = files[file];
+
+		auto rook_attacks = get_rook_attacks_mask(idx, occupancy_mask);
+		auto rank_attacks = (rook_attacks & rank_mask);
+		auto file_attacks = (rook_attacks & file_mask);
+
+		bool is_rank_blocker = ((rank_attacks & wking) && (rank_attacks & b_hor));
+		bool is_file_blocker = ((file_attacks & wking) && (file_attacks & b_hor));
+
+		auto is_rook_blocker = (is_rank_blocker || is_file_blocker);
+
+		// Diagonal attack check
+		auto bishop_attacks = get_bishop_attacks_mask(idx, occupancy_mask);
+		auto main_diag_attacks = (bishop_attacks & main_diagonals[main_diagonal_index[idx]]);
+		auto anti_diag_attacks = (bishop_attacks & anti_diagonals[anti_diagonal_index[idx]]);
+
+		bool is_main_diag_blocker = ((main_diag_attacks & wking) && (main_diag_attacks & b_diag));
+		bool is_anti_diag_blocker = ((anti_diag_attacks & wking) && (anti_diag_attacks & b_diag));
+
+		auto is_diagonal_blocker = (is_main_diag_blocker || is_anti_diag_blocker);
+
+		auto correct_moves = ((vertical_moves * !(is_diagonal_blocker))
+			| (main_diag_capture * !(is_file_blocker || is_anti_diag_blocker))
+			| (anti_diag_capture * !(is_file_blocker || is_main_diag_blocker))) * (!is_rank_blocker);
+
+		while (correct_moves) {
+			int index = 63 - __lzcnt64(correct_moves);
+			uint64_t move_mask = (1ull << index);
+			correct_moves ^= move_mask;
+
+			moves.emplace_back(move_color, piece, mask, move_mask, true, piece_on_square[index]);
+		}
 
 		board ^= _mask;
 	}

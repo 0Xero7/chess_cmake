@@ -21,7 +21,7 @@ int main()
 	//getchar();
 
 	//Board rboard("1bk5/2b5/7b/4B3/5b1B/B2K4/3B4/8"); // "1r6/2r2k2/7r/4R3/3K1r2/8/R2R2R1/8"); // 1r5k / pp5p / 2p3p1 / 5b2 / 2q5 / P3Q3 / 1PP4P / 2K1R3");// 7k / 8 / R7 / R7 / 8 / 5K2 / 8 / 8");// "6k1 / 4Q3 / 8 / 6K1 / 8 / 8 / 8 / 8");// "rnbqkbnr / pppppppp / 8 / 8 / 8 / 8 / PPPPPPPP / RNBQKBNR");// "5k2 / 8 / 8 / 8 / 2n5 / 8 / 2K5 / n7"); // ("4k3 / 8 / 8 / 8 / nnn5 / nKn5 / 8 / 8");
-	Board rboard("k7/1n4b1/2N5/4N3/3K4/8/8/8");
+	Board rboard("5k2/5p2/4B1B1/8/8/8/8/5K2");
 	//Board rboard("1r6/2r2k2/1R5r/3KR3/5r1R/2R5/R5R1/5R2");
 	//Board rboard("k1b5/8/8/4R3/8/2K5/8/8");
 	//Board rboard("k7/8/8/8/r1R4K/8/8/8");
@@ -40,7 +40,7 @@ int main()
 
 		auto bench = Benchmark();
 
-		rboard.get_knight_moves<WHITE>(collect);
+		rboard.get_pawn_moves<BLACK>(collect);
 
 		ms1 += bench.end_benchmark(false);
 	}
@@ -54,6 +54,8 @@ int main()
 		collect2.reserve(128);
 		auto bench = Benchmark();
 		/*bboard.get_bishop_moves<WHITE>(collect);*/
+
+		rboard.get_fast_pawn_moves<BLACK>(collect2);
 
 		ms2 += bench.end_benchmark(false);
 	}
