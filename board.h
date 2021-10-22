@@ -145,6 +145,36 @@ public:
 			| ((king_attacks & pieces[w_king].get_board())) | (knight & knight_attacks) | (pawn & pawn_attacks);
 	}
 
+	template <int> bool is_attacked(int sq);
+	template <> bool is_attacked<WHITE>(int sq) {
+		auto square = (1ull << sq);
+
+		auto occupancy = get_occupancy_mask();
+
+		bool attacked_by_pawns = (square & (pieces[b_pawn].shift<DIR_DOWN_LEFT>() | pieces[b_pawn].shift<DIR_DOWN_RIGHT>()).get_board());
+		bool attacked_by_knights = (pieces[b_knight].get_board() & get_knight_attack_mask(sq));
+		bool attacked_by_king = (pieces[b_king].get_board() & get_king_attack_mask(sq));
+
+		bool attacked_by_rook = ((pieces[b_rook] | pieces[b_queen]).get_board() & get_rook_attacks_mask(sq, occupancy));
+		bool attacked_by_bishop = ((pieces[b_bishop] | pieces[b_queen]).get_board() & get_bishop_attacks_mask(sq, occupancy));
+
+		return (attacked_by_pawns || attacked_by_knights || attacked_by_king || attacked_by_rook || attacked_by_bishop);
+	}
+	template <> bool is_attacked<BLACK>(int sq) {
+		auto square = (1ull << sq);
+
+		auto occupancy = get_occupancy_mask();
+
+		bool attacked_by_pawns = (square & (pieces[w_pawn].shift<DIR_UP_LEFT>() | pieces[b_pawn].shift<DIR_UP_RIGHT>()).get_board());
+		bool attacked_by_knights = (pieces[w_knight].get_board() & get_knight_attack_mask(sq));
+		bool attacked_by_king = (pieces[w_king].get_board() & get_king_attack_mask(sq));
+
+		bool attacked_by_rook = ((pieces[w_rook] | pieces[w_queen]).get_board() & get_rook_attacks_mask(sq, occupancy));
+		bool attacked_by_bishop = ((pieces[w_bishop] | pieces[w_queen]).get_board() & get_bishop_attacks_mask(sq, occupancy));
+
+		return (attacked_by_pawns || attacked_by_knights || attacked_by_king || attacked_by_rook || attacked_by_bishop);
+	}
+
 	template <int> void get_pawn_moves(std::vector<Move>&);
 	template <> void get_pawn_moves<WHITE>(std::vector<Move>& moves) {
 		_get_w_pawn_moves(WHITE, w_pawn, pieces[w_pawn], white_pieces, black_pieces, moves);
@@ -253,6 +283,18 @@ public:
 		_get_king_moves(BLACK, b_king, pieces[b_king], black_pieces, white_pieces, moves);
 	}
 	void _get_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+	
+
+
+	template <int> void get_fast_king_moves(std::vector<Move>&);
+	template <> void get_fast_king_moves<WHITE>(std::vector<Move>& moves) {
+		_get_w_fast_king_moves(WHITE, w_king, pieces[w_king], white_pieces, black_pieces, moves);
+	}
+	template <> void get_fast_king_moves<BLACK>(std::vector<Move>& moves) {
+		_get_b_fast_king_moves(BLACK, b_king, pieces[b_king], black_pieces, white_pieces, moves);
+	}
+	void _get_w_fast_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+	void _get_b_fast_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 
 	void make_move(Move&);
 	void unmake_move(Move&);

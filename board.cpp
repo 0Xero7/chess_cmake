@@ -457,6 +457,71 @@ void Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const 
 	}
 }
 
+
+void Board::_get_w_fast_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
+{
+	if (bb.is_zero()) return;
+
+	uint64_t board = bb.get_board();
+	int idx = 63 - __lzcnt64(board);
+	auto occupancy_mask = (our | opp).get_board();
+
+	uint64_t _mask = (1ull << idx);
+	Bitboard mask = Bitboard(_mask);
+
+	auto attack_mask = get_king_attack_mask(idx);
+	auto correct_mask = 0ull;
+
+	while (attack_mask) {
+		int index = 63 - __lzcnt64(attack_mask);
+		auto m = (1ull << index);
+		attack_mask ^= m;
+
+		if (is_attacked<WHITE>(index)) continue;
+		correct_mask |= m;
+	}
+
+	while (correct_mask) {
+		int index = 63 - __lzcnt64(correct_mask);
+		auto m = (1ull << index);
+		correct_mask ^= m;
+
+		Helpers::generate_and_add_move_unchecked(move_color, *this, mask, Bitboard(m), piece, our, opp, moves);
+	}
+}
+
+void Board::_get_b_fast_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
+{
+	if (bb.is_zero()) return;
+
+	uint64_t board = bb.get_board();
+	int idx = 63 - __lzcnt64(board);
+	auto occupancy_mask = (our | opp).get_board();
+
+	uint64_t _mask = (1ull << idx);
+	Bitboard mask = Bitboard(_mask);
+
+	auto attack_mask = get_king_attack_mask(idx);
+	auto correct_mask = 0ull;
+
+	while (attack_mask) {
+		int index = 63 - __lzcnt64(attack_mask);
+		auto m = (1ull << index);
+		attack_mask ^= m;
+
+		if (is_attacked<BLACK>(index)) continue;
+		correct_mask |= m;
+	}
+
+	while (correct_mask) {
+		int index = 63 - __lzcnt64(correct_mask);
+		auto m = (1ull << index);
+		correct_mask ^= m;
+
+		Helpers::generate_and_add_move_unchecked(move_color, *this, mask, Bitboard(m), piece, our, opp, moves);
+	}
+}
+
 void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
 	if (bb.is_zero()) return;
