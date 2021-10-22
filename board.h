@@ -164,6 +164,15 @@ public:
 	}
 	void _get_knight_moves(color move_color, color other_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
 	
+	template <int> void get_old_knight_moves(std::vector<Move>&);
+	template <> void get_old_knight_moves<WHITE>(std::vector<Move>& moves) {
+		_get_old_knight_moves(WHITE, w_knight, pieces[w_knight], white_pieces, black_pieces, moves);
+	}
+	template <> void get_old_knight_moves<BLACK>(std::vector<Move>& moves) {
+		_get_old_knight_moves(BLACK, b_knight, pieces[b_knight], black_pieces, white_pieces, moves);
+	}
+	void _get_old_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves);
+
 
 
 	template <int> void get_rook_moves(std::vector<Move>&);

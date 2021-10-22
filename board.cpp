@@ -400,6 +400,36 @@ void Board::_get_knight_moves(color move_color, color other_color, piece_type pi
 	}
 }
 
+void Board::_get_old_knight_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
+{
+	if (bb.is_zero()) return;
+
+	uint64_t board = bb.get_board();
+	while (board > 0) {
+		int idx = 63 - __lzcnt64(board);
+		uint64_t _mask = (1ull << idx);
+		Bitboard mask = Bitboard(_mask);
+
+		auto UP = mask.shift_up_2();
+		Helpers::generate_and_add_move(move_color, *this, mask, UP.shift_left(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, mask, UP.shift_right(), piece, our, opp, moves);
+
+		auto DOWN = mask.shift_down_2();
+		Helpers::generate_and_add_move(move_color, *this, mask, DOWN.shift_left(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, mask, DOWN.shift_right(), piece, our, opp, moves);
+
+		auto LEFT = mask.shift_left_2();
+		Helpers::generate_and_add_move(move_color, *this, mask, LEFT.shift_up(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, mask, LEFT.shift_down(), piece, our, opp, moves);
+
+		auto RIGHT = mask.shift_right_2();
+		Helpers::generate_and_add_move(move_color, *this, mask, RIGHT.shift_up(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, mask, RIGHT.shift_down(), piece, our, opp, moves);
+
+		board ^= _mask;
+	}
+}
+
 void Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const bb, Bitboard& const our, Bitboard& const opp, std::vector<Move>& moves)
 {
 	if (bb.is_zero()) return;
