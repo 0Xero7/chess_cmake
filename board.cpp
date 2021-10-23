@@ -4,20 +4,19 @@
 #include <iostream>
 
 namespace Helpers {
-	void push_back_move_if_valid(Move&& item, std::vector<Move>& container) {
-		if (!item.to_square.is_zero()) container.push_back(item);
-	}
-
-	void generate_and_add_move(color move_color, Board& board, Bitboard& from_square, Bitboard& to_square, piece_type piece,
+	void generate_and_add_move(color move_color, Board& board, //Bitboard& from_square, Bitboard& to_square,
+		int from_index, int to_index, piece_type piece,
 		Bitboard& const our, Bitboard& const opp, std::vector<Move>& container) {
+
+		auto to_square = Bitboard((1ull << to_index));
 
 		if ((to_square & ~our).is_zero()) return;
 
 		bool is_captures = !(to_square & opp).is_zero();
-		int idx = to_square.get_last_set_bit();
-		piece_type captured_piece = is_captures ? board.get_piece_at(idx) : nothing;
+		//int idx = to_square.get_last_set_bit();
+		piece_type captured_piece = is_captures ? board.get_piece_at(to_index) : nothing;
 
-		auto move = Move(move_color, piece, from_square, to_square, is_captures, captured_piece);
+		auto move = Move(move_color, piece, from_index, to_index, is_captures, captured_piece);
 		board.make_move(move);
 
 		auto occupancy = (our | opp).get_board();
@@ -34,15 +33,18 @@ namespace Helpers {
 		container.push_back(move);
 	}
 
-	void generate_and_add_move_unchecked(color move_color, Board& board, Bitboard& from_square, Bitboard& to_square, piece_type piece,
+	void generate_and_add_move_unchecked(color move_color, Board& board, //Bitboard& from_square, Bitboard& to_square, 
+		int from_index, int to_index, piece_type piece, 
 		Bitboard& const our, Bitboard& const opp, std::vector<Move>& container) {
+
+		auto to_square = Bitboard((1ull << to_index));
 
 		bool is_captures = !(to_square & opp).is_zero();
 		int idx = to_square.get_last_set_bit();
 		piece_type captured_piece = (is_captures ? board.get_piece_at(idx) : nothing);
 
 		//auto move = ;
-		container.emplace_back(move_color, piece, from_square, to_square, !is_captures, captured_piece);
+		container.emplace_back(move_color, piece, from_index, to_index, !is_captures, captured_piece);
 	}
 }
 
@@ -392,7 +394,7 @@ void Board::_get_knight_moves(color move_color, color other_color, piece_type pi
 				auto _mask = (1ull << sq);
 				attacks ^= _mask;
 
-				Helpers::generate_and_add_move_unchecked(move_color, *this, mask, Bitboard(_mask), piece, our, opp, moves);
+				Helpers::generate_and_add_move_unchecked(move_color, *this, idx, sq, piece, our, opp, moves);
 			}
 		}
 
@@ -411,20 +413,20 @@ void Board::_get_old_knight_moves(color move_color, piece_type piece, Bitboard& 
 		Bitboard mask = Bitboard(_mask);
 
 		auto UP = mask.shift_up_2();
-		Helpers::generate_and_add_move(move_color, *this, mask, UP.shift_left(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, UP.shift_right(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, UP.shift_left().get_last_set_bit(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, UP.shift_right().get_last_set_bit(), piece, our, opp, moves);
 
 		auto DOWN = mask.shift_down_2();
-		Helpers::generate_and_add_move(move_color, *this, mask, DOWN.shift_left(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, DOWN.shift_right(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, DOWN.shift_left().get_last_set_bit(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, DOWN.shift_right().get_last_set_bit(), piece, our, opp, moves);
 
 		auto LEFT = mask.shift_left_2();
-		Helpers::generate_and_add_move(move_color, *this, mask, LEFT.shift_up(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, LEFT.shift_down(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, LEFT.shift_up().get_last_set_bit(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, LEFT.shift_down().get_last_set_bit(), piece, our, opp, moves);
 
 		auto RIGHT = mask.shift_right_2();
-		Helpers::generate_and_add_move(move_color, *this, mask, RIGHT.shift_up(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, RIGHT.shift_down(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, RIGHT.shift_up().get_last_set_bit(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, RIGHT.shift_down().get_last_set_bit(), piece, our, opp, moves);
 
 		board ^= _mask;
 	}
@@ -438,22 +440,15 @@ void Board::_get_king_moves(color move_color, piece_type piece, Bitboard& const 
 	int idx = 63 - __lzcnt64(board);
 	auto occupancy_mask = (our | opp).get_board();
 
-	while (board) {
-		int idx = 63 - __lzcnt64(board);
-		uint64_t _mask = (1ull << idx);
-		Bitboard mask = Bitboard(_mask);
+	auto attacks = get_king_attack_mask(idx) & ~our.get_board();
 
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_LEFT>(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_RIGHT>(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_UP>(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_DOWN>(), piece, our, opp, moves);
+	while (attacks) {
+		int index = 63 - __lzcnt64(attacks);
+		uint64_t _mask = (1ull << index);
 
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_UP_LEFT>(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_UP_RIGHT>(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_DOWN_RIGHT>(), piece, our, opp, moves);
-		Helpers::generate_and_add_move(move_color, *this, mask, mask.shift<DIR_DOWN_LEFT>(), piece, our, opp, moves);
+		Helpers::generate_and_add_move(move_color, *this, idx, index, piece, our, opp, moves);
 
-		board ^= _mask;
+		attacks ^= _mask;
 	}
 }
 
@@ -486,7 +481,7 @@ void Board::_get_w_fast_king_moves(color move_color, piece_type piece, Bitboard&
 		auto m = (1ull << index);
 		correct_mask ^= m;
 
-		Helpers::generate_and_add_move_unchecked(move_color, *this, mask, Bitboard(m), piece, our, opp, moves);
+		Helpers::generate_and_add_move_unchecked(move_color, *this, piece, idx, index, our, opp, moves);
 	}
 }
 
@@ -518,7 +513,7 @@ void Board::_get_b_fast_king_moves(color move_color, piece_type piece, Bitboard&
 		auto m = (1ull << index);
 		correct_mask ^= m;
 
-		Helpers::generate_and_add_move_unchecked(move_color, *this, mask, Bitboard(m), piece, our, opp, moves);
+		Helpers::generate_and_add_move_unchecked(move_color, *this, piece, idx, index, our, opp, moves);
 	}
 }
 
@@ -541,7 +536,7 @@ void Board::_get_rook_moves(color move_color, piece_type piece, Bitboard& const 
 			uint64_t move_mask = (1ull << index);
 			attacks ^= move_mask;
 
-			Helpers::generate_and_add_move(move_color, *this, mask, Bitboard(move_mask), piece, our, opp, moves);
+			Helpers::generate_and_add_move(move_color, *this, idx, index, piece, our, opp, moves);
 		}
 
 		board ^= _mask;
@@ -604,7 +599,7 @@ void Board::_get_fast_rook_moves(color move_color, color other_color, piece_type
 			uint64_t move_mask = (1ull << index);
 			_attacks ^= move_mask;
 
-			moves.emplace_back(move_color, piece, mask, move_mask, true, piece_on_square[index]);
+			moves.emplace_back(move_color, piece, idx, index, true, piece_on_square[index]);
 		}
 
 		while (_quiets) {
@@ -612,7 +607,7 @@ void Board::_get_fast_rook_moves(color move_color, color other_color, piece_type
 			uint64_t move_mask = (1ull << index);
 			_quiets ^= move_mask;
 
-			moves.emplace_back(move_color, piece, mask, move_mask, false, nothing);
+			moves.emplace_back(move_color, piece, idx, index, false, nothing);
 		}
 
 		/*while (correct_attacks) {
@@ -687,7 +682,7 @@ void Board::get_vfast_bishop_moves(std::vector<Move>& moves) {
 			uint64_t move_mask = (1ull << index);
 			correct_attacks ^= move_mask;
 
-			Helpers::generate_and_add_move_unchecked(WHITE, *this, mask, Bitboard(move_mask), w_bishop, our, black_pieces, moves);
+			Helpers::generate_and_add_move_unchecked(WHITE, *this, idx, index, w_bishop, our, black_pieces, moves);
 		}
 
 		board ^= _mask;
@@ -754,7 +749,7 @@ void Board::_get_fast_bishop_moves(color move_color, color other_color, piece_ty
 			uint64_t move_mask = (1ull << index);
 			correct_attacks ^= move_mask;
 
-			Helpers::generate_and_add_move_unchecked(WHITE, *this, mask, Bitboard(move_mask), w_bishop, our, black_pieces, moves);
+			Helpers::generate_and_add_move_unchecked(WHITE, *this, idx, index, w_bishop, our, black_pieces, moves);
 		}
 
 		board ^= _mask;
@@ -822,7 +817,7 @@ void Board::_get_fast_queen_moves(color move_color, color other_color, piece_typ
 			uint64_t move_mask = (1ull << index);
 			correct_attacks ^= move_mask;
 
-			Helpers::generate_and_add_move_unchecked(WHITE, *this, mask, Bitboard(move_mask), w_bishop, our, black_pieces, moves);
+			Helpers::generate_and_add_move_unchecked(WHITE, *this, idx, index, w_bishop, our, black_pieces, moves);
 		}
 
 		board ^= _mask;
@@ -848,7 +843,7 @@ void Board::_get_bishop_moves(color move_color, piece_type piece, Bitboard& cons
 			uint64_t move_mask = (1ull << index);
 			attacks ^= move_mask;
 
-			Helpers::generate_and_add_move(move_color, *this, mask, Bitboard(move_mask), piece, our, opp, moves);
+			Helpers::generate_and_add_move(move_color, *this, idx, index, piece, our, opp, moves);
 		}
 
 		board ^= _mask;
@@ -875,7 +870,7 @@ void Board::_get_queen_moves(color move_color, piece_type piece, Bitboard& const
 			uint64_t move_mask = (1ull << index);
 			attacks ^= move_mask;
 
-			Helpers::generate_and_add_move(move_color, *this, mask, Bitboard(move_mask), piece, our, opp, moves);
+			Helpers::generate_and_add_move(move_color, *this, idx, index, piece, our, opp, moves);
 		}
 
 		board ^= _mask;
@@ -927,17 +922,17 @@ void Board::_get_w_pawn_moves(color move_color, piece_type piece, Bitboard& cons
 		Bitboard mask = Bitboard(_mask);
 
 		auto up = mask.shift_up() & ~(our | opp);
-		Helpers::generate_and_add_move(WHITE, *this, mask, up, w_pawn, our, opp, moves);
+		Helpers::generate_and_add_move(WHITE, *this, idx, up.get_last_set_bit(), w_pawn, our, opp, moves);
 
 		if (!(mask & RANK_2).is_zero()) {
 			auto up2 = up.shift_up() & ~(our | opp);
-			Helpers::generate_and_add_move(WHITE, *this, mask, up2, w_pawn, our, opp, moves);
+			Helpers::generate_and_add_move(WHITE, *this, idx, up2.get_last_set_bit(), w_pawn, our, opp, moves);
 		}
 
 		auto cap_left = mask.shift_up().shift_left() & opp;
-		Helpers::generate_and_add_move(WHITE, *this, mask, cap_left, w_pawn, our, opp, moves);
+		Helpers::generate_and_add_move(WHITE, *this, idx, cap_left.get_last_set_bit(), w_pawn, our, opp, moves);
 		auto cap_right = mask.shift_up().shift_right() & opp;
-		Helpers::generate_and_add_move(WHITE, *this, mask, cap_right, w_pawn, our, opp, moves);
+		Helpers::generate_and_add_move(WHITE, *this, idx, cap_right.get_last_set_bit(), w_pawn, our, opp, moves);
 
 		board ^= _mask;
 	}
@@ -1000,7 +995,7 @@ void Board::_get_w_fast_pawn_moves(color move_color, piece_type piece, Bitboard&
 			uint64_t move_mask = (1ull << index);
 			correct_moves ^= move_mask;
 
-			moves.emplace_back(move_color, piece, mask, move_mask, true, piece_on_square[index]);
+			moves.emplace_back(move_color, piece, idx, index, true, piece_on_square[index]);
 		}
 
 		board ^= _mask;
@@ -1018,17 +1013,17 @@ void Board::_get_b_pawn_moves(color move_color, piece_type piece, Bitboard& cons
 		Bitboard mask = Bitboard(_mask);
 
 		auto down = mask.shift_down() & ~(our | opp);
-		Helpers::generate_and_add_move(BLACK, *this, mask, down, b_pawn, our, opp, moves);
+		Helpers::generate_and_add_move(BLACK, *this, idx, down.get_last_set_bit(), b_pawn, our, opp, moves);
 
 		if (!(mask & RANK_7).is_zero()) {
 			auto down2 = down.shift_down() & ~(our | opp);
-			Helpers::generate_and_add_move(BLACK, *this, mask, down2, b_pawn, our, opp, moves);
+			Helpers::generate_and_add_move(BLACK, *this, idx, down2.get_last_set_bit(), b_pawn, our, opp, moves);
 		}
 
 		auto cap_left = mask.shift_down().shift_left() & opp;
-		Helpers::generate_and_add_move(BLACK, *this, mask, cap_left, b_pawn, our, opp, moves);
+		Helpers::generate_and_add_move(BLACK, *this, idx, cap_left.get_last_set_bit(), b_pawn, our, opp, moves);
 		auto cap_right = mask.shift_down().shift_right() & opp;
-		Helpers::generate_and_add_move(BLACK, *this, mask, cap_right, b_pawn, our, opp, moves);
+		Helpers::generate_and_add_move(BLACK, *this, idx, cap_right.get_last_set_bit(), b_pawn, our, opp, moves);
 
 		board ^= _mask;
 	}
@@ -1091,7 +1086,7 @@ void Board::_get_b_fast_pawn_moves(color move_color, piece_type piece, Bitboard&
 			uint64_t move_mask = (1ull << index);
 			correct_moves ^= move_mask;
 
-			moves.emplace_back(move_color, piece, mask, move_mask, true, piece_on_square[index]);
+			moves.emplace_back(move_color, piece, idx, index, true, piece_on_square[index]);
 		}
 
 		board ^= _mask;
@@ -1100,7 +1095,10 @@ void Board::_get_b_fast_pawn_moves(color move_color, piece_type piece, Bitboard&
 
 
 void Board::make_move(Move& move) {
-	auto mask = (move.from_square | move.to_square);
+	auto from = (1ull << move.from_index);
+	auto to = (1ull << move.to_index);
+	auto mask = (from | to);
+
 	pieces[move.piece] ^= mask;
 
 	if (move.move_color == WHITE) {
@@ -1111,24 +1109,26 @@ void Board::make_move(Move& move) {
 	}
 
 	if (move.is_capture) {
-		if (move.move_color == WHITE) black_pieces = black_pieces ^ move.to_square;
-		else white_pieces = white_pieces ^ move.to_square;
-		pieces[move.captured_piece] = pieces[move.captured_piece] ^ move.to_square;
+		if (move.move_color == WHITE) black_pieces = black_pieces ^ to;
+		else white_pieces = white_pieces ^ to;
+		pieces[move.captured_piece] = pieces[move.captured_piece] ^ to;
 	}
 
-	piece_on_square[move.from_square.get_last_set_bit()] = nothing;
-	piece_on_square[move.to_square.get_last_set_bit()]   = move.piece;
+	piece_on_square[move.from_index] = nothing;
+	piece_on_square[move.to_index]   = move.piece;
 }
 
 void Board::unmake_move(Move& move) {
-	auto mask = (move.from_square | move.to_square);
+	auto from = (1ull << move.from_index);
+	auto to = (1ull << move.to_index);
+	auto mask = (from | to);
 
 	pieces[move.piece] ^= mask;
 
 	if (move.is_capture) {
-		if (move.move_color == 0) black_pieces = black_pieces | move.to_square;
-		else white_pieces = white_pieces | move.to_square;
-		pieces[move.captured_piece] ^= move.to_square;
+		if (move.move_color == 0) black_pieces = black_pieces | to;
+		else white_pieces = white_pieces | to;
+		pieces[move.captured_piece] ^= to;
 	}
 	if (move.move_color == WHITE) {
 		white_pieces ^= mask;
@@ -1137,8 +1137,8 @@ void Board::unmake_move(Move& move) {
 		black_pieces ^= mask;
 	}
 
-	piece_on_square[move.from_square.get_last_set_bit()] = move.piece;
-	piece_on_square[move.to_square.get_last_set_bit()] = move.captured_piece;
+	piece_on_square[move.from_index] = move.piece;
+	piece_on_square[move.to_index] = move.captured_piece;
 }
 
 float Board::evaluate() {

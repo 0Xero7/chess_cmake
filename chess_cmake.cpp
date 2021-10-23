@@ -25,7 +25,7 @@ int main()
 	//Board rboard("1r6/2r2k2/1R5r/3KR3/5r1R/2R5/R5R1/5R2");
 	//Board rboard("k1b5/8/8/4R3/8/2K5/8/8");
 	//Board rboard("k7/8/8/8/r1R4K/8/8/8");
-	auto occr = rboard.get_occupancy_mask();
+	//auto occr = rboard.get_occupancy_mask();
 
 	//Board bboard("1b6/2b2k2/1B5b/3KB3/5b1B/2B5/B5B1/5B2");
 
@@ -60,10 +60,10 @@ int main()
 		ms2 += bench.end_benchmark(false);
 	}
 
-	assert(collect.size() == collect2.size());
 	std::cout << ms2 / 1000 << "us\n";
 	std::cout << (ms1 * 100) / ms2 << "% faster\n";
 	std::cout << "\nMoves: " << collect.size() << " " << collect2.size() << "\n";
+	assert(collect.size() == collect2.size());
 	getchar();
 
 	/*auto x = board.get_occupancy_mask();
@@ -77,7 +77,7 @@ int main()
 	////board.get_queen_moves<WHITE>(moves);
 
 	//DEBUG::show_board(board);
-	////getchar();
+	//getchar();
 
 	//bool white = 1;
 	//for (int i = 0; i < 100; ++i) {
@@ -88,7 +88,7 @@ int main()
 	//	// BENCHMARK
 	//	auto start = chrono::high_resolution_clock::now();
 
-	//	auto [score, move] = minimax(board, white, 0, 4, 2 * NEG_INF - 1, 2 * INF + 1);
+	//	auto [score, move] = minimax(board, white, 0, 6, 2 * NEG_INF - 1, 2 * INF + 1);
 
 	//	// before optimization : 1400ms
 	//	// optimize get_occupancy_mask : 1250ms
@@ -97,7 +97,7 @@ int main()
 
 	//	auto duration = chrono::duration_cast<chrono::microseconds>(end - start).count();
 
-	//	if (move.to_square.is_zero()) break;
+	//	//if (move.to_square.is_zero()) break;
 	//	system("cls");
 	//	board.make_move(move);
 	//	DEBUG::show_board(board);
